@@ -244,8 +244,13 @@ export const approveWithdrawal = async (req: Request, res: Response) => {
             throw new Error('Withdrawal not found or not pending');
         }
 
-        withdrawal.status = 'completed'; // For TRC20 MVP, we mark complete when admin provides txHash
-        withdrawal.txHash = txHash;
+        withdrawal.status = 'completed';
+
+        // Backwards compatibility for old records missing amountReceived
+        if (withdrawal.amountReceived === undefined) {
+            withdrawal.amountReceived = withdrawal.amount - (withdrawal.fee || 0);
+        }
+
         await withdrawal.save({ session });
 
         // Unlock and Deduct Balance
@@ -261,7 +266,7 @@ export const approveWithdrawal = async (req: Request, res: Response) => {
         await createNotification(
             withdrawal.userId,
             'Withdrawal Approved',
-            `Your withdrawal of ${withdrawal.amount} ${withdrawal.asset} has been processed. TxHash: ${txHash}`,
+            `Your withdrawal of ${withdrawal.amount} ${withdrawal.asset} has been processed successfully.`,
             'success'
         );
 
@@ -272,7 +277,7 @@ export const approveWithdrawal = async (req: Request, res: Response) => {
                 await sendEmail({
                     email: user.email,
                     subject: 'Withdrawal Approved',
-                    message: `Hello ${user.fullName},\n\nYour withdrawal of ${withdrawal.amount} ${withdrawal.asset} has been approved and processed. Transaction Hash: ${txHash || 'N/A'}\n\nBest regards,\nCrossChainX Team`,
+                    message: `Hello ${user.fullName},\n\nYour withdrawal of ${withdrawal.amount} ${withdrawal.asset} has been approved and processed.\n\nBest regards,\nCrossChainX Team`,
                 });
             }
         } catch (emailError) {
