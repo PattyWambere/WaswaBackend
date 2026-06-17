@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { Resend } from 'resend';
 
 interface EmailOptions {
     email: string;
@@ -20,6 +20,7 @@ const sendEmail = async (options: EmailOptions) => {
         return;
     }
 
+    const resend = new Resend(apiKey);
     const fromEmail = process.env.FROM_EMAIL || 'noreply@crosschainx.app';
 
     const htmlBody = options.html || `
@@ -40,27 +41,22 @@ const sendEmail = async (options: EmailOptions) => {
     `;
 
     try {
-        const response = await axios.post(
-            'https://api.resend.com/emails',
-            {
-                from: `CrossChainX Support <${fromEmail}>`,
-                to: [options.email],
-                subject: options.subject,
-                html: htmlBody,
-                text: options.message,
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
+        const { data, error } = await resend.emails.send({
+            from: `CrossChainX Support <${fromEmail}>`,
+            to: [options.email],
+            subject: options.subject,
+            html: htmlBody,
+            text: options.message,
+        });
 
-        console.log(`✅ Email sent to ${options.email} | ID: ${response.data.id}`);
+        if (error) {
+            console.error(`❌ Resend error sending to ${options.email}:`, error);
+            throw new Error(error.message);
+        }
+
+        console.log(`✅ Email sent to ${options.email} | ID: ${data?.id}`);
     } catch (err: any) {
-        const detail = err.response?.data || err.message;
-        console.error(`❌ Failed to send email to ${options.email}:`, detail);
+        console.error(`❌ Failed to send email to ${options.email}:`, err.message);
         throw err;
     }
 };

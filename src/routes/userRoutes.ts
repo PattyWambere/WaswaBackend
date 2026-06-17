@@ -2,6 +2,7 @@ import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import { checkMaintenanceMode } from '../middleware/maintenanceMiddleware.js';
 import * as userCtrl from '../controllers/userController.js';
+import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.get('/balances', userCtrl.getMyBalances);
 router.get('/config', userCtrl.getAssetConfig);
 router.get('/history', userCtrl.getMyTransactionHistory);
 
-router.post('/deposit', userCtrl.submitDeposit);
+router.post('/deposit', upload.single('proofImage'), userCtrl.submitDeposit);
 router.post('/withdraw', userCtrl.requestWithdrawal);
 
 export default router;

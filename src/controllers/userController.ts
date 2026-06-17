@@ -40,16 +40,28 @@ export const submitDeposit = async (req: AuthRequest, res: Response): Promise<vo
         res.status(401).json({ error: 'User not found' });
         return;
     }
-    const { asset, network, amount, binanceId } = req.body;
+    const { asset, network, amount, txHash } = req.body;
+    const file = (req as any).file;
+
+    if (!txHash && !file) {
+        res.status(400).json({ error: 'Please provide a transaction ID or upload a screenshot proof' });
+        return;
+    }
+
     try {
-        const deposit = await Deposit.create({
+        const depositData: any = {
             userId: req.user._id,
             asset,
             network,
-            amount,
-            binanceId,
+            amount: Number(amount),
+            binanceId: 'N/A',
             status: 'pending'
-        });
+        };
+
+        if (txHash) depositData.txHash = txHash;
+        if (file?.path) depositData.proofImageUrl = file.path;
+
+        const deposit = await Deposit.create(depositData);
 
         res.status(201).json(deposit);
     } catch (error) {

@@ -161,6 +161,19 @@ export const getPendingDeposits = async (req: Request, res: Response) => {
     }
 };
 
+export const getDepositById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const deposit = await Deposit.findById(req.params.id).populate('userId', 'email');
+        if (!deposit) {
+            res.status(404).json({ error: 'Deposit not found' });
+            return;
+        }
+        res.json(deposit);
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+};
+
 export const approveDeposit = async (req: Request, res: Response) => {
     const session = await mongoose.startSession();
     session.startTransaction();

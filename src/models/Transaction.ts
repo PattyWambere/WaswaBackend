@@ -8,6 +8,7 @@ export interface IDeposit extends Document {
     amount: number;
     binanceId: string;
     txHash?: string;
+    proofImageUrl?: string;
     status: 'pending' | 'approved' | 'rejected';
     createdAt: Date;
     updatedAt: Date;
@@ -20,6 +21,7 @@ const DepositSchema = new Schema<IDeposit>({
     amount: { type: Number, required: true },
     binanceId: { type: String, required: true },
     txHash: { type: String, unique: true, sparse: true },
+    proofImageUrl: { type: String },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }
 }, { timestamps: true });
 

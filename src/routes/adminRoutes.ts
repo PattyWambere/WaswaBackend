@@ -37,6 +37,7 @@ router.post('/wallet-settings', uploadMiddleware, adminCtrl.updateWalletSettings
 
 // Deposits
 router.get('/deposits/pending', adminCtrl.getPendingDeposits);
+router.get('/deposits/:id', adminCtrl.getDepositById);
 router.post('/deposits/:id/approve', adminCtrl.approveDeposit);
 router.post('/deposits/:id/reject', adminCtrl.rejectDeposit);
 
