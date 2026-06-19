@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IUser extends Document {
     fullName: string;
@@ -13,6 +13,9 @@ export interface IUser extends Document {
     verificationOtp?: string;
     verificationOtpExpire?: Date;
     savedWallets?: { network: string; address: string }[];
+    referralCode?: string;
+    referredBy?: Types.ObjectId;
+    referralBonus?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -32,7 +35,10 @@ const UserSchema = new Schema<IUser>({
     savedWallets: [{
         network: { type: String, required: true },
         address: { type: String, required: true }
-    }]
+    }],
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    referralBonus: { type: Number, default: 0 }
 }, { timestamps: true });
 
 export default model<IUser>('User', UserSchema);

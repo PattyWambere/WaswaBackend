@@ -14,7 +14,7 @@ const generateToken = (id: string) => {
 };
 
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
-    const { fullName, email, phoneNumber, password } = req.body;
+    const { fullName, email, phoneNumber, password, referralCode } = req.body;
 
     try {
         const userExists = await User.findOne({ email });
@@ -34,6 +34,27 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         const otpExpire = new Date();
         otpExpire.setMinutes(otpExpire.getMinutes() + 10); // 10 minutes
 
+        // Generate unique referral code for the new user
+        const generateReferralCode = () => crypto.randomBytes(4).toString('hex').toUpperCase();
+        let newCode = '';
+        let codeExists = true;
+        while (codeExists) {
+            newCode = generateReferralCode();
+            const existingCodeUser = await User.findOne({ referralCode: newCode });
+            if (!existingCodeUser) {
+                codeExists = false;
+            }
+        }
+
+        // Resolve referrer if a referral code was provided
+        let referrerId: any = null;
+        if (referralCode) {
+            const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+            if (referrer) {
+                referrerId = referrer._id;
+            }
+        }
+
         const user = await User.create({
             fullName,
             email,
@@ -43,6 +64,8 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
             isVerified: false,
             verificationOtp: otp,
             verificationOtpExpire: otpExpire,
+            referralCode: newCode,
+            ...(referrerId && { referredBy: referrerId }),
         });
 
         // Send registration email
@@ -77,7 +100,9 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
             }
             res.json({
                 _id: user._id,
+                fullName: user.fullName,
                 email: user.email,
+                phoneNumber: user.phoneNumber,
                 role: user.role,
                 token: generateToken(user._id.toString()),
             });
@@ -283,7 +308,9 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({
             _id: user._id,
+            fullName: user.fullName,
             email: user.email,
+            phoneNumber: user.phoneNumber,
             role: user.role,
             token: generateToken(user._id.toString()),
         });

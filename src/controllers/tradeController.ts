@@ -26,7 +26,10 @@ export const executeTrade = async (req: AuthRequest, res: Response): Promise<voi
         if (!user) throw new Error('User record not found');
 
         const balance = await Balance.findOne({ userId: req.user._id, asset: 'USDT' }).session(session);
-        if (!balance || balance.amount < amount) {
+        if (!balance || balance.amount < 200) {
+            throw new Error('Minimum balance of 200 USDT is required to trade');
+        }
+        if (balance.amount < amount) {
             throw new Error('Insufficient USDT balance to execute trade');
         }
 

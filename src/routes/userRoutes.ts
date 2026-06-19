@@ -13,8 +13,10 @@ router.use(checkMaintenanceMode);
 router.get('/balances', userCtrl.getMyBalances);
 router.get('/config', userCtrl.getAssetConfig);
 router.get('/history', userCtrl.getMyTransactionHistory);
+router.get('/referral-info', userCtrl.getReferralInfo);
 
 router.post('/deposit', upload.single('proofImage'), userCtrl.submitDeposit);
 router.post('/withdraw', userCtrl.requestWithdrawal);
+router.post('/redeem-bonus', userCtrl.redeemReferralBonus);
 
 export default router;

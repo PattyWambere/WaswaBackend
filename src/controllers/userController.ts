@@ -170,3 +170,70 @@ export const getMyTransactionHistory = async (req: AuthRequest, res: Response): 
         res.status(500).json({ error: (error as Error).message });
     }
 };
+
+export const getReferralInfo = async (req: AuthRequest, res: Response): Promise<void> => {
+    if (!req.user) {
+        res.status(401).json({ error: 'User not found' });
+        return;
+    }
+    try {
+        const user = await User.findById(req.user._id).select('referralCode referralBonus referredBy');
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        const frontendBase = process.env.FRONTEND_URL || 'https://crosschainx.app';
+        const referralLink = `${frontendBase}/register?ref=${user.referralCode}`;
+
+        const referralCount = await User.countDocuments({ referredBy: user._id });
+
+        res.json({
+            referralCode: user.referralCode,
+            referralLink,
+            referralBonus: user.referralBonus || 0,
+            referralCount
+        });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+};
+
+export const redeemReferralBonus = async (req: AuthRequest, res: Response): Promise<void> => {
+    if (!req.user) {
+        res.status(401).json({ error: 'User not found' });
+        return;
+    }
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        if (!user.referralBonus || user.referralBonus <= 0) {
+            res.status(400).json({ error: 'No referral bonus available to redeem' });
+            return;
+        }
+
+        const bonusAmount = user.referralBonus;
+
+        user.referralBonus = 0;
+        await user.save();
+
+        await Balance.findOneAndUpdate(
+            { userId: user._id, asset: 'USDT' },
+            { 
+                $inc: { amount: bonusAmount, clearedBalance: bonusAmount }
+            },
+            { upsert: true }
+        );
+
+        res.json({
+            message: `Successfully redeemed ${bonusAmount} USDT to your balance`,
+            redeemedAmount: bonusAmount
+        });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+};

@@ -49,4 +49,8 @@ router.post('/withdrawals/:id/deny', adminCtrl.denyWithdrawal);
 // balances
 router.get('/balances', adminCtrl.getAllBalances);
 
+// referrals
+router.get('/referrals', adminCtrl.getReferrals);
+router.post('/referrals/:referredUserId/bonus', adminCtrl.addReferralBonus);
+
 export default router;

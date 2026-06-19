@@ -356,3 +356,87 @@ export const getAllBalances = async (req: Request, res: Response) => {
         res.status(500).json({ error: (error as Error).message });
     }
 };
+
+export const getReferrals = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const referredUsers = await User.find({ referredBy: { $exists: true, $ne: null } })
+            .select('email fullName referredBy referralBonus createdAt')
+            .populate('referredBy', 'email fullName referralCode');
+
+        const results = await Promise.all(referredUsers.map(async (u: any) => {
+            const depositCount = await Deposit.countDocuments({ userId: u._id });
+            const completedDepositCount = await Deposit.countDocuments({ userId: u._id, status: 'approved' });
+            return {
+                _id: u._id,
+                email: u.email,
+                name: u.fullName || '',
+                joinedAt: u.createdAt,
+                referredBy: u.referredBy
+                    ? {
+                        _id: u.referredBy._id,
+                        email: u.referredBy.email,
+                        name: u.referredBy.fullName || '',
+                        referralCode: u.referredBy.referralCode,
+                      }
+                    : null,
+                depositCount,
+                completedDepositCount,
+                hasDeposited: completedDepositCount > 0,
+                currentBonus: u.referralBonus || 0,
+            };
+        }));
+
+        res.json(results);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: (error as Error).message });
+    }
+};
+
+export const addReferralBonus = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { amount } = req.body;
+        const { referredUserId } = req.params;
+
+        if (!amount || isNaN(amount) || Number(amount) <= 0) {
+            res.status(400).json({ error: 'A valid positive bonus amount is required' });
+            return;
+        }
+
+        const referredUser = await User.findById(referredUserId);
+        if (!referredUser) {
+            res.status(404).json({ error: 'Referred user not found' });
+            return;
+        }
+
+        const completedDeposits = await Deposit.countDocuments({ userId: referredUserId, status: 'approved' });
+        if (completedDeposits === 0) {
+            res.status(400).json({
+                error: 'Cannot award bonus: the referred user has not completed a deposit yet'
+            });
+            return;
+        }
+
+        if (!referredUser.referredBy) {
+            res.status(400).json({ error: 'This user was not referred by anyone' });
+            return;
+        }
+
+        const referrer = await User.findById(referredUser.referredBy);
+        if (!referrer) {
+            res.status(404).json({ error: 'Referrer not found' });
+            return;
+        }
+
+        referrer.referralBonus = (referrer.referralBonus || 0) + Number(amount);
+        await referrer.save();
+
+        res.json({
+            message: `Successfully added ${amount} USDT bonus to ${referrer.fullName} (${referrer.email})`,
+            referrer: { email: referrer.email, newBonus: referrer.referralBonus }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: (error as Error).message });
+    }
+};
